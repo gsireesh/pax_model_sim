@@ -46,7 +46,7 @@ def format_example(example):
     example_title = example["question_title"].iloc[0]
     example_body = example["question_content"].iloc[0]
     example_answer = example["best_answer"].iloc[0].replace('\\n', '\n')
-    return f"**{example_title}**\n\n{example_body}\n\n**Answer:** {example_answer}"
+    return f"### {example_title}\n\n{example_body}\n\n**Answer:** {example_answer}"
 
 
 with open("accuracies.pkl", "rb") as f:
@@ -54,11 +54,6 @@ with open("accuracies.pkl", "rb") as f:
     
 n_data = [100, 500, 2500, 10000, 50000]
 model_filenames = [f"model_{n}.pkl" for n in n_data]
-models = []
-for filename in model_filenames:
-    with open(filename, "rb") as f:
-        models.append(joblib.load(filename))
-st.session_state["models"] = models
 
 test_df = pd.read_json("test_df.json")
 
@@ -78,10 +73,11 @@ selected_idx = sidebar_form.select_slider(
 model_accuracy = accuracies[selected_idx]
 
 sidebar_form.write(f"Accuracy: {model_accuracy:.2f}")
-use_model = sidebar_form.checkbox("Display Model Predictions Box?")
 sidebar_form.form_submit_button("Reload app", on_click=init_state)
 
-model = models[selected_idx]
+selected_model = model_filenames[selected_idx]
+with open(selected_model, "rb") as f:
+    model = joblib.load(selected_model)
 
 
 example = test_df.sample()
@@ -104,7 +100,10 @@ look like, you're presented with the interface below. Spend some time working wi
 would you react if it were deployed in your workflow today?""")
 
 st.markdown("## Model Section")
-st.button("Randomize")
+
+col1, col2 = st.columns(2)
+col1.button("Randomize")
+use_model = col2.checkbox("Display Model Predictions Box?")
 st.markdown(format_example(example))
 
 col1, col2 = st.columns(2)
@@ -115,7 +114,7 @@ col2.markdown(f"**Predicted Answer:** {random_label}")
 
 if use_model:
     with st.expander("Compare with real model"):
-        display_text = [example.replace("\n", " ") for example in st.session_state["examples"]]
+        display_text = [example.replace("\n", " ").replace("#", '') for example in st.session_state["examples"]]
         display_df = pd.DataFrame(
             {
                 "Text": display_text,
